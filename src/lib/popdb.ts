@@ -232,6 +232,29 @@ export const not = (op: string) => `not.${op}`;
 // Usage: query: { or: or('age.gt.18', 'name.eq.foo') } → ?or=(age.gt.18,name.eq.foo)
 export const or = (...conditions: string[]) => `(${conditions.join(",")})`;
 
+// --- PostgREST Aggregate Helpers ---
+//
+// These generate fragments for the `select` query param, e.g.:
+//   apiFetch('orders', { query: { select: `${sum('amount')},order_date` } })
+//
+// PERFORMANCE: Aggregates scan entire result sets — always ensure the
+// columns being aggregated and filtered on are indexed. For large tables,
+// prefer pre-aggregating data in the database (materialized views, summary
+// tables updated via event handlers) rather than aggregating on every request.
+
+export const count = (col?: string, alias?: string) => {
+  const base = col ? `${col}.count()` : `count()`;
+  return alias ? `${alias}:${base}` : base;
+};
+export const sum = (col: string, alias?: string) =>
+  alias ? `${alias}:${col}.sum()` : `${col}.sum()`;
+export const avg = (col: string, alias?: string) =>
+  alias ? `${alias}:${col}.avg()` : `${col}.avg()`;
+export const min = (col: string, alias?: string) =>
+  alias ? `${alias}:${col}.min()` : `${col}.min()`;
+export const max = (col: string, alias?: string) =>
+  alias ? `${alias}:${col}.max()` : `${col}.max()`;
+
 // --- REST API ---
 
 export async function apiFetch<T>(
