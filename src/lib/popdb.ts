@@ -24,6 +24,8 @@ export type ApiFetchOptions = {
   query?: Record<string, string>;
   single?: boolean;
   prefer?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export class ApiError extends Error {
@@ -198,16 +200,37 @@ export function logout(): void {
 
 // --- PostgREST Query Helpers ---
 
+// Comparison
 export const eq = (val: string | number | boolean) => `eq.${val}`;
 export const neq = (val: string | number | boolean) => `neq.${val}`;
 export const gt = (val: string | number) => `gt.${val}`;
 export const gte = (val: string | number) => `gte.${val}`;
 export const lt = (val: string | number) => `lt.${val}`;
 export const lte = (val: string | number) => `lte.${val}`;
+export const in_ = (vals: (string | number)[]) => `in.(${vals.join(",")})`;
+
+// Null checks
+export const isNull = () => `is.null`;
+export const isNotNull = () => `is.not_null`;
+export const is = (val: boolean | null) => `is.${val}`;
+
+// Pattern matching
 export const like = (val: string) => `like.${val}`;
 export const ilike = (val: string) => `ilike.${val}`;
-export const is = (val: boolean | null) => `is.${val}`;
-export const in_ = (vals: (string | number)[]) => `in.(${vals.join(",")})`;
+export const match = (pattern: string) => `match.${pattern}`;
+export const imatch = (pattern: string) => `imatch.${pattern}`;
+
+// Full-text search
+export const fts = (query: string) => `fts.${query}`;
+
+// Array / JSON containment
+export const contains = (vals: (string | number)[]) => `cs.{${vals.join(",")}}`;
+export const containedBy = (vals: (string | number)[]) => `cd.{${vals.join(",")}}`;
+
+// Logical
+export const not = (op: string) => `not.${op}`;
+// Usage: query: { or: or('age.gt.18', 'name.eq.foo') } → ?or=(age.gt.18,name.eq.foo)
+export const or = (...conditions: string[]) => `(${conditions.join(",")})`;
 
 // --- REST API ---
 
@@ -215,11 +238,15 @@ export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<T> {
-  const { method = "GET", headers = {}, body, query, single, prefer } = options;
+  const { method = "GET", headers = {}, body, query, single, prefer, limit, offset } = options;
+
+  const params: Record<string, string> = { ...query };
+  if (limit !== undefined) params["limit"] = String(limit);
+  if (offset !== undefined) params["offset"] = String(offset);
 
   let url = `${API_URL}/${path}`;
-  if (query && Object.keys(query).length > 0) {
-    url += `?${new URLSearchParams(query).toString()}`;
+  if (Object.keys(params).length > 0) {
+    url += `?${new URLSearchParams(params).toString()}`;
   }
 
   const mergedHeaders: Record<string, string> = {
