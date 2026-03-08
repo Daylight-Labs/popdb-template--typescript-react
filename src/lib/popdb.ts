@@ -175,9 +175,39 @@ export async function refreshSession(): Promise<AuthResponse> {
   return data;
 }
 
+export async function getMe(): Promise<User> {
+  const response = await fetch(`${AUTH_URL}/me`, {
+    headers: baseHeaders(),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      (body as { message?: string }).message ?? "Failed to fetch user",
+      body
+    );
+  }
+
+  return response.json() as Promise<User>;
+}
+
 export function logout(): void {
   clearTokens();
 }
+
+// --- PostgREST Query Helpers ---
+
+export const eq = (val: string | number | boolean) => `eq.${val}`;
+export const neq = (val: string | number | boolean) => `neq.${val}`;
+export const gt = (val: string | number) => `gt.${val}`;
+export const gte = (val: string | number) => `gte.${val}`;
+export const lt = (val: string | number) => `lt.${val}`;
+export const lte = (val: string | number) => `lte.${val}`;
+export const like = (val: string) => `like.${val}`;
+export const ilike = (val: string) => `ilike.${val}`;
+export const is = (val: boolean | null) => `is.${val}`;
+export const in_ = (vals: (string | number)[]) => `in.(${vals.join(",")})`;
 
 // --- REST API ---
 
